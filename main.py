@@ -1,9 +1,10 @@
 import sys
 import math
 from typing import List
-from PyQt5 import QtWidgets, QtCore, QtGui, uic
+from PyQt5 import QtWidgets, QtCore, QtGui
+from ui_design import Ui_MainWindow
 
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+# ===== Вспомогательные функции =====
 
 def _ensure_int(x, name):
     if int(x) != x:
@@ -24,16 +25,17 @@ def _comb(n, k):
     return numer // denom
 
 def _phi_standard_normal(x):
-    # Плотность стандартного нормального распределения φ(x)
     return math.exp(-x*x/2.0) / math.sqrt(2.0 * math.pi)
 
 def _Phi(z):
-    # Функция распределения стандартного нормального: через erf
     return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
 
-# ========== РАСЧЁТЫ ПО ФОРМУЛАМ ==========
+def _check_prob01(p, name="p"):
+    if not (0.0 <= p <= 1.0):
+        raise ValueError(f"{name} должна быть в диапазоне [0, 1].")
 
-# Комбинаторика
+# ===== Комбинаторика =====
+
 def calc_factorial(n):
     n = _ensure_int(n, "n")
     if n < 0:
@@ -41,7 +43,6 @@ def calc_factorial(n):
     return math.factorial(n)
 
 def calc_permutations_no_rep(n):
-    # P(n) = n!
     return calc_factorial(n)
 
 def calc_permutations_with_rep(n, repeats: List[int]):
@@ -69,21 +70,20 @@ def calc_arrangements_with_rep(n, k):
     k = _ensure_int(k, "k")
     if n < 0 or k < 0:
         raise ValueError("n, k должны быть >= 0.")
-    # Число k-размещений с повторениями из n: n^k
     return n ** k
 
 def calc_combinations_no_rep(n, k):
     return _comb(n, k)
 
 def calc_combinations_with_rep(n, k):
-    # C(n+k-1, k)
     n = _ensure_int(n, "n")
     k = _ensure_int(k, "k")
     if n <= 0 or k < 0:
         raise ValueError("n должно быть >= 1, k >= 0.")
     return _comb(n + k - 1, k)
 
-# Теория вероятности (общие формулы)
+# ===== Общая теория вероятностей =====
+
 def calc_laplace(m, n):
     m = _ensure_int(m, "m")
     n = _ensure_int(n, "n")
@@ -97,7 +97,7 @@ def calc_geometric_prob(s_fav, s_all):
     if s_all <= 0:
         raise ValueError("Мера всей области должна быть > 0.")
     if not (0 <= s_fav <= s_all):
-        raise ValueError("Мера благоприятной области должна быть в диапазоне [0, мера всей области].")
+        raise ValueError("Мера благоприятной области должна быть в [0, мера всей области].")
     return s_fav / s_all
 
 def calc_statistical_prob(m, N):
@@ -108,10 +108,6 @@ def calc_statistical_prob(m, N):
     if not (0 <= m <= N):
         raise ValueError("0 <= m <= N.")
     return m / N
-
-def _check_prob01(p, name="p"):
-    if not (0.0 <= p <= 1.0):
-        raise ValueError(f"{name} должна быть в диапазоне [0, 1].")
 
 def calc_addition_disjoint(pA, pB):
     _check_prob01(pA, "P(A)")
@@ -150,13 +146,9 @@ def calc_total_probability(pH: List[float], pA_given_H: List[float]):
     for i, (ph, pa) in enumerate(zip(pH, pA_given_H), start=1):
         _check_prob01(ph, f"P(H{i})")
         _check_prob01(pa, f"P(A|H{i})")
-    if abs(sum(pH) - 1.0) > 1e-6:
-        # Можно не требовать строго 1, но предупредим
-        pass
     return sum(ph * pa for ph, pa in zip(pH, pA_given_H))
 
 def calc_bayes_idx(i, pH: List[float], pA_given_H: List[float]):
-    # Возвращает P(H_i | A)
     if not (1 <= i <= len(pH)):
         raise ValueError("Индекс гипотезы i вне диапазона.")
     denom = calc_total_probability(pH, pA_given_H)
@@ -165,7 +157,8 @@ def calc_bayes_idx(i, pH: List[float], pA_given_H: List[float]):
     numer = pH[i - 1] * pA_given_H[i - 1]
     return numer / denom
 
-# Независимые повторные испытания
+# ===== Независимые повторные испытания =====
+
 def calc_bernoulli(n, k, p):
     n = _ensure_int(n, "n")
     k = _ensure_int(k, "k")
@@ -187,12 +180,12 @@ def calc_laplace_local(n, p, k):
     k = _ensure_int(k, "k")
     _check_prob01(p, "p")
     q = 1 - p
-    if n <= 0 or q < 0:
-        raise ValueError("n > 0, 0 <= p <= 1.")
-    mu = n * p
+    if n <= 0:
+        raise ValueError("n должно быть > 0.")
     var = n * p * q
     if var == 0:
         raise ValueError("Вариация равна 0 (p=0 или p=1) — приближение неприменимо.")
+    mu = n * p
     z = (k - mu) / math.sqrt(var)
     return _phi_standard_normal(z) / math.sqrt(var)
 
@@ -204,229 +197,162 @@ def calc_laplace_integral(n, p, k1, k2):
     if k2 < k1:
         raise ValueError("k2 должен быть >= k1.")
     q = 1 - p
-    mu = n * p
     var = n * p * q
     if var == 0:
         raise ValueError("Вариация равна 0 (p=0 или p=1) — приближение неприменимо.")
+    mu = n * p
     s = math.sqrt(var)
-    # Непрерывная поправка 0.5
     z2 = (k2 + 0.5 - mu) / s
     z1 = (k1 - 0.5 - mu) / s
     return _Phi(z2) - _Phi(z1)
 
-# ========== ОПИСАНИЕ ФОРМУЛ ДЛЯ ВКЛАДОК ==========
+# ===== Описание формул по вкладкам =====
 
 TABS = {
     "tilesCombinatorics": [
-        {
-            "title": "Факториал",
-            "expression": "n! = 1·2·...·n",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
-            ],
-            "calc": lambda n: calc_factorial(n),
-        },
-        {
-            "title": "Перестановки (без повтор.)",
-            "expression": "P(n) = n!",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
-            ],
-            "calc": lambda n: calc_permutations_no_rep(n),
-        },
-        {
-            "title": "Перестановки (с повтор.)",
-            "expression": "P = n! / (n1! · n2! · ...)",
-            "params": [
-                {"key": "n", "label": "n — всего элементов", "type": "int"},
-                {"key": "повторы", "label": "n_i — повторы (через запятую)", "type": "list_int"},
-            ],
-            "calc": lambda n, reps: calc_permutations_with_rep(n, reps),
-        },
-        {
-            "title": "Размещения (без повтор.)",
-            "expression": "A(n,k) = n! / (n-k)!",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
-                {"key": "k", "label": "k — целое, 0 ≤ k ≤ n", "type": "int"},
-            ],
-            "calc": lambda n, k: calc_arrangements_no_rep(n, k),
-        },
-        {
-            "title": "Размещения (с повтор.)",
-            "expression": "A'(n,k) = n^k",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
-                {"key": "k", "label": "k — целое, k ≥ 0", "type": "int"},
-            ],
-            "calc": lambda n, k: calc_arrangements_with_rep(n, k),
-        },
-        {
-            "title": "Сочетания (без повтор.)",
-            "expression": "C(n,k) = n! / (k!(n-k)!)",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
-                {"key": "k", "label": "k — целое, 0 ≤ k ≤ n", "type": "int"},
-            ],
-            "calc": lambda n, k: calc_combinations_no_rep(n, k),
-        },
-        {
-            "title": "Сочетания (с повтор.)",
-            "expression": "C'(n,k) = C(n+k-1, k)",
-            "params": [
-                {"key": "n", "label": "n — целое, n ≥ 1", "type": "int"},
-                {"key": "k", "label": "k — целое, k ≥ 0", "type": "int"},
-            ],
-            "calc": lambda n, k: calc_combinations_with_rep(n, k),
-        },
+        {"title": "Факториал", "expression": "n! = 1·2·...·n",
+         "params": [{"key": "n", "label": "n — целое, n ≥ 0", "type": "int"}],
+         "calc": lambda n: calc_factorial(n)},
+        {"title": "Перестановки (без повтор.)", "expression": "P(n) = n!",
+         "params": [{"key": "n", "label": "n — целое, n ≥ 0", "type": "int"}],
+         "calc": lambda n: calc_permutations_no_rep(n)},
+        {"title": "Перестановки (с повтор.)", "expression": "P = n! / (n1! · n2! · ...)",
+         "params": [
+             {"key": "n", "label": "n — всего элементов", "type": "int"},
+             {"key": "повторы", "label": "n_i — повторы (через запятую)", "type": "list_int"},
+         ],
+         "calc": lambda n, reps: calc_permutations_with_rep(n, reps)},
+        {"title": "Размещения (без повтор.)", "expression": "A(n,k) = n! / (n-k)!",
+         "params": [
+             {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
+             {"key": "k", "label": "k — целое, 0 ≤ k ≤ n", "type": "int"},
+         ],
+         "calc": lambda n, k: calc_arrangements_no_rep(n, k)},
+        {"title": "Размещения (с повтор.)", "expression": "A'(n,k) = n^k",
+         "params": [
+             {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
+             {"key": "k", "label": "k — целое, k ≥ 0", "type": "int"},
+         ],
+         "calc": lambda n, k: calc_arrangements_with_rep(n, k)},
+        {"title": "Сочетания (без повтор.)", "expression": "C(n,k) = n! / (k!(n-k)!)",
+         "params": [
+             {"key": "n", "label": "n — целое, n ≥ 0", "type": "int"},
+             {"key": "k", "label": "k — целое, 0 ≤ k ≤ n", "type": "int"},
+         ],
+         "calc": lambda n, k: calc_combinations_no_rep(n, k)},
+        {"title": "Сочетания (с повтор.)", "expression": "C'(n,k) = C(n+k-1, k)",
+         "params": [
+             {"key": "n", "label": "n — целое, n ≥ 1", "type": "int"},
+             {"key": "k", "label": "k — целое, k ≥ 0", "type": "int"},
+         ],
+         "calc": lambda n, k: calc_combinations_with_rep(n, k)},
     ],
-
     "tilesProbability": [
-        {
-            "title": "Классическая вероятность",
-            "expression": "P(A) = m / n",
-            "params": [
-                {"key": "m", "label": "m — благоприятные исходы", "type": "int"},
-                {"key": "n", "label": "n — все равновозможные исходы", "type": "int"},
-            ],
-            "calc": lambda m, n: calc_laplace(m, n),
-        },
-        {
-            "title": "Геометрическая вероятность",
-            "expression": "P = мера(благоприятной) / мера(всей)",
-            "params": [
-                {"key": "S_бл", "label": "Мера благоприятной области", "type": "float"},
-                {"key": "S_вс", "label": "Мера всей области (>0)", "type": "float"},
-            ],
-            "calc": lambda s1, s2: calc_geometric_prob(s1, s2),
-        },
-        {
-            "title": "Статистическая вероятность",
-            "expression": "P ≈ m / N (при большом N)",
-            "params": [
-                {"key": "m", "label": "m — число успехов", "type": "int"},
-                {"key": "N", "label": "N — число испытаний", "type": "int"},
-            ],
-            "calc": lambda m, N: calc_statistical_prob(m, N),
-        },
-        {
-            "title": "Сложение (несовместимые)",
-            "expression": "P(A∪B) = P(A) + P(B)",
-            "params": [
-                {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
-                {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
-            ],
-            "calc": lambda pA, pB: calc_addition_disjoint(pA, pB),
-        },
-        {
-            "title": "Сложение (общий случай)",
-            "expression": "P(A∪B) = P(A)+P(B)-P(A∩B)",
-            "params": [
-                {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
-                {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
-                {"key": "P(A∩B)", "label": "P(A∩B) в [0,1]", "type": "float"},
-            ],
-            "calc": lambda pA, pB, pAB: calc_addition_general(pA, pB, pAB),
-        },
-        {
-            "title": "Умножение (независимые)",
-            "expression": "P(A∩B) = P(A)·P(B)",
-            "params": [
-                {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
-                {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
-            ],
-            "calc": lambda pA, pB: calc_mult_independent(pA, pB),
-        },
-        {
-            "title": "Умножение (общий случай)",
-            "expression": "P(A∩B) = P(A|B)·P(B)",
-            "params": [
-                {"key": "P(A|B)", "label": "P(A|B) в [0,1]", "type": "float"},
-                {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
-            ],
-            "calc": lambda pAgB, pB: calc_mult_general(pAgB, pB),
-        },
-        {
-            "title": "Полная вероятность (до 3 гип.)",
-            "expression": "P(A)=Σ P(H_i)·P(A|H_i)",
-            "params": [
-                {"key": "P(H1)", "label": "P(H1) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H1)", "label": "P(A|H1) в [0,1]", "type": "float_optional"},
-                {"key": "P(H2)", "label": "P(H2) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H2)", "label": "P(A|H2) в [0,1]", "type": "float_optional"},
-                {"key": "P(H3)", "label": "P(H3) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H3)", "label": "P(A|H3) в [0,1]", "type": "float_optional"},
-            ],
-            "calc": lambda ph1, pa1, ph2, pa2, ph3, pa3: calc_total_probability(
-                [ph for ph in [ph1, ph2, ph3] if ph is not None],
-                [pa for pa in [pa1, pa2, pa3] if pa is not None],
-            ),
-        },
-        {
-            "title": "Формула Байеса (до 3 гип.)",
-            "expression": "P(H_i|A)=P(H_i)P(A|H_i)/Σ P(H_j)P(A|H_j)",
-            "params": [
-                {"key": "i", "label": "Индекс гипотезы i (1..3)", "type": "int"},
-                {"key": "P(H1)", "label": "P(H1) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H1)", "label": "P(A|H1) в [0,1]", "type": "float_optional"},
-                {"key": "P(H2)", "label": "P(H2) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H2)", "label": "P(A|H2) в [0,1]", "type": "float_optional"},
-                {"key": "P(H3)", "label": "P(H3) в [0,1]", "type": "float_optional"},
-                {"key": "P(A|H3)", "label": "P(A|H3) в [0,1]", "type": "float_optional"},
-            ],
-            "calc": lambda i, ph1, pa1, ph2, pa2, ph3, pa3: calc_bayes_idx(
-                i,
-                [ph for ph in [ph1, ph2, ph3] if ph is not None],
-                [pa for pa in [pa1, pa2, pa3] if pa is not None],
-            ),
-        },
+        {"title": "Классическая вероятность", "expression": "P(A) = m / n",
+         "params": [
+             {"key": "m", "label": "m — благоприятные исходы", "type": "int"},
+             {"key": "n", "label": "n — все равновозможные исходы", "type": "int"},
+         ],
+         "calc": lambda m, n: calc_laplace(m, n)},
+        {"title": "Геометрическая вероятность", "expression": "P = мера(благоприятной) / мера(всей)",
+         "params": [
+             {"key": "S_бл", "label": "Мера благоприятной области", "type": "float"},
+             {"key": "S_вс", "label": "Мера всей области (>0)", "type": "float"},
+         ],
+         "calc": lambda s1, s2: calc_geometric_prob(s1, s2)},
+        {"title": "Статистическая вероятность", "expression": "P ≈ m / N (при большом N)",
+         "params": [
+             {"key": "m", "label": "m — число успехов", "type": "int"},
+             {"key": "N", "label": "N — число испытаний", "type": "int"},
+         ],
+         "calc": lambda m, N: calc_statistical_prob(m, N)},
+        {"title": "Сложение (несовместимые)", "expression": "P(A∪B) = P(A) + P(B)",
+         "params": [
+             {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
+             {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
+         ],
+         "calc": lambda pA, pB: calc_addition_disjoint(pA, pB)},
+        {"title": "Сложение (общий случай)", "expression": "P(A∪B) = P(A)+P(B)-P(A∩B)",
+         "params": [
+             {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
+             {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
+             {"key": "P(A∩B)", "label": "P(A∩B) в [0,1]", "type": "float"},
+         ],
+         "calc": lambda pA, pB, pAB: calc_addition_general(pA, pB, pAB)},
+        {"title": "Умножение (независимые)", "expression": "P(A∩B) = P(A)·P(B)",
+         "params": [
+             {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
+             {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
+         ],
+         "calc": lambda pA, pB: calc_mult_independent(pA, pB)},
+        {"title": "Умножение (общий случай)", "expression": "P(A∩B) = P(A|B)·P(B)",
+         "params": [
+             {"key": "P(A|B)", "label": "P(A|B) в [0,1]", "type": "float"},
+             {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
+         ],
+         "calc": lambda pAgB, pB: calc_mult_general(pAgB, pB)},
+        {"title": "Полная вероятность (до 3 гип.)", "expression": "P(A)=Σ P(H_i)·P(A|H_i)",
+         "params": [
+             {"key": "P(H1)", "label": "P(H1) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H1)", "label": "P(A|H1) в [0,1]", "type": "float_optional"},
+             {"key": "P(H2)", "label": "P(H2) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H2)", "label": "P(A|H2) в [0,1]", "type": "float_optional"},
+             {"key": "P(H3)", "label": "P(H3) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H3)", "label": "P(A|H3) в [0,1]", "type": "float_optional"},
+         ],
+         "calc": lambda ph1, pa1, ph2, pa2, ph3, pa3: calc_total_probability(
+             [ph for ph in [ph1, ph2, ph3] if ph is not None],
+             [pa for pa in [pa1, pa2, pa3] if pa is not None],
+         )},
+        {"title": "Формула Байеса (до 3 гип.)", "expression": "P(H_i|A)=P(H_i)P(A|H_i)/Σ P(H_j)P(A|H_j)",
+         "params": [
+             {"key": "i", "label": "Индекс гипотезы i (1..3)", "type": "int"},
+             {"key": "P(H1)", "label": "P(H1) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H1)", "label": "P(A|H1) в [0,1]", "type": "float_optional"},
+             {"key": "P(H2)", "label": "P(H2) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H2)", "label": "P(A|H2) в [0,1]", "type": "float_optional"},
+             {"key": "P(H3)", "label": "P(H3) в [0,1]", "type": "float_optional"},
+             {"key": "P(A|H3)", "label": "P(A|H3) в [0,1]", "type": "float_optional"},
+         ],
+         "calc": lambda i, ph1, pa1, ph2, pa2, ph3, pa3: calc_bayes_idx(
+             i,
+             [ph for ph in [ph1, ph2, ph3] if ph is not None],
+             [pa for pa in [pa1, pa2, pa3] if pa is not None],
+         )},
     ],
-
     "tilesRepeated": [
-        {
-            "title": "Формула Бернулли",
-            "expression": "P(X=k)=C(n,k)·p^k·(1-p)^{n-k}",
-            "params": [
-                {"key": "n", "label": "n — число испытаний", "type": "int"},
-                {"key": "k", "label": "k — число успехов", "type": "int"},
-                {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
-            ],
-            "calc": lambda n, k, p: calc_bernoulli(n, k, p),
-        },
-        {
-            "title": "Лаплас (локальная)",
-            "expression": "≈ φ(z)/√(npq), z=(k-np)/√(npq)",
-            "params": [
-                {"key": "n", "label": "n — число испытаний", "type": "int"},
-                {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
-                {"key": "k", "label": "k — число успехов", "type": "int"},
-            ],
-            "calc": lambda n, p, k: calc_laplace_local(n, p, k),
-        },
-        {
-            "title": "Лаплас (интегральная)",
-            "expression": "≈ Φ(z2)-Φ(z1) с непрерывн. поправкой",
-            "params": [
-                {"key": "n", "label": "n — число испытаний", "type": "int"},
-                {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
-                {"key": "k1", "label": "k1 — нижняя граница", "type": "int"},
-                {"key": "k2", "label": "k2 — верхняя граница", "type": "int"},
-            ],
-            "calc": lambda n, p, k1, k2: calc_laplace_integral(n, p, k1, k2),
-        },
-        {
-            "title": "Пуассон",
-            "expression": "P(X=k)=e^{-λ}·λ^k/k!",
-            "params": [
-                {"key": "λ", "label": "λ — среднее (≥0)", "type": "float"},
-                {"key": "k", "label": "k — целое (≥0)", "type": "int"},
-            ],
-            "calc": lambda lmbd, k: calc_poisson(lmbd, k),
-        },
+        {"title": "Формула Бернулли", "expression": "P(X=k)=C(n,k)·p^k·(1-p)^{n-k}",
+         "params": [
+             {"key": "n", "label": "n — число испытаний", "type": "int"},
+             {"key": "k", "label": "k — число успехов", "type": "int"},
+             {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
+         ],
+         "calc": lambda n, k, p: calc_bernoulli(n, k, p)},
+        {"title": "Лаплас (локальная)", "expression": "≈ φ(z)/√(npq), z=(k-np)/√(npq)",
+         "params": [
+             {"key": "n", "label": "n — число испытаний", "type": "int"},
+             {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
+             {"key": "k", "label": "k — число успехов", "type": "int"},
+         ],
+         "calc": lambda n, p, k: calc_laplace_local(n, p, k)},
+        {"title": "Лаплас (интегральная)", "expression": "≈ Φ(z2)-Φ(z1) с непрерывн. поправкой",
+         "params": [
+             {"key": "n", "label": "n — число испытаний", "type": "int"},
+             {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
+             {"key": "k1", "label": "k1 — нижняя граница", "type": "int"},
+             {"key": "k2", "label": "k2 — верхняя граница", "type": "int"},
+         ],
+         "calc": lambda n, p, k1, k2: calc_laplace_integral(n, p, k1, k2)},
+        {"title": "Пуассон", "expression": "P(X=k)=e^{-λ}·λ^k/k!",
+         "params": [
+             {"key": "λ", "label": "λ — среднее (≥0)", "type": "float"},
+             {"key": "k", "label": "k — целое (≥0)", "type": "int"},
+         ],
+         "calc": lambda lmbd, k: calc_poisson(lmbd, k)},
     ],
 }
 
-# ========== ДИАЛОГ ФОРМУЛЫ ==========
+# ===== Диалог формулы =====
 
 class FormulaDialog(QtWidgets.QDialog):
     def __init__(self, parent, title, expression, params, calc_fn):
@@ -450,7 +376,6 @@ class FormulaDialog(QtWidgets.QDialog):
             edit = QtWidgets.QLineEdit()
             edit.setPlaceholderText(p["key"])
             edit.setClearButtonEnabled(True)
-            # Подсказки по типу
             if p.get("type") == "list_int":
                 edit.setToolTip("Список целых через запятую, например: 2,1,3")
             self.edits.append(edit)
@@ -499,7 +424,6 @@ class FormulaDialog(QtWidgets.QDialog):
         t = text.strip()
         if t == "":
             raise ValueError("Пустой список повторов.")
-        # Разделители: запятая/пробел/точка с запятой
         raw = [x for x in t.replace(";", ",").replace(" ", ",").split(",") if x.strip() != ""]
         try:
             arr = [int(float(x)) for x in raw]
@@ -515,15 +439,12 @@ class FormulaDialog(QtWidgets.QDialog):
             if typ == "int":
                 values.append(self._to_int(txt))
             elif typ == "float":
-                v = self._to_float(txt, allow_empty=False)
-                values.append(v)
+                values.append(self._to_float(txt, allow_empty=False))
             elif typ == "float_optional":
-                v = self._to_float(txt, allow_empty=True)
-                values.append(v)
+                values.append(self._to_float(txt, allow_empty=True))
             elif typ == "list_int":
                 values.append(self._to_list_int(txt))
             else:
-                # По умолчанию как float
                 values.append(self._to_float(txt))
         return values
 
@@ -531,8 +452,7 @@ class FormulaDialog(QtWidgets.QDialog):
         try:
             values = self._parse_inputs()
             result = self.calc_fn(*values)
-            # Красивый вывод
-            if isinstance(result, (int,)) or (isinstance(result, float) and result.is_integer()):
+            if isinstance(result, int) or (isinstance(result, float) and result.is_integer()):
                 out = str(int(round(result)))
             else:
                 out = f"{result:.10g}"
@@ -540,23 +460,20 @@ class FormulaDialog(QtWidgets.QDialog):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Ошибка ввода", str(e))
 
-# ========== ГЛАВНОЕ ОКНО ==========
+# ===== Главное окно =====
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi("main_window.ui", self)
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
 
-        # Находим контейнеры плиток на вкладках
-        self.tiles_combinatorics = self.findChild(QtWidgets.QWidget, "tilesCombinatorics")
-        self.tiles_probability   = self.findChild(QtWidgets.QWidget, "tilesProbability")
-        self.tiles_repeated      = self.findChild(QtWidgets.QWidget, "tilesRepeated")
-
-        if not all([self.tiles_combinatorics, self.tiles_probability, self.tiles_repeated]):
-            raise RuntimeError("Не найдены контейнеры плиток на вкладках в .ui")
+        # Контейнеры плиток на вкладках
+        self.tiles_combinatorics = self.ui.tilesCombinatorics
+        self.tiles_probability   = self.ui.tilesProbability
+        self.tiles_repeated      = self.ui.tilesRepeated
 
         self._setup_style()
-
         self._populate_tiles(self.tiles_combinatorics, TABS["tilesCombinatorics"])
         self._populate_tiles(self.tiles_probability,   TABS["tilesProbability"])
         self._populate_tiles(self.tiles_repeated,      TABS["tilesRepeated"])
@@ -581,9 +498,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 border-color: #80BFFF;
             }
         """)
-        header = self.findChild(QtWidgets.QLabel, "headerLabel")
-        if header:
-            header.setStyleSheet("color: #222;")
+        self.ui.headerLabel.setStyleSheet("color: #222;")
 
     def _populate_tiles(self, container_widget, formulas):
         layout = container_widget.layout()
@@ -591,7 +506,6 @@ class MainWindow(QtWidgets.QMainWindow):
             layout = QtWidgets.QGridLayout(container_widget)
             container_widget.setLayout(layout)
 
-        # Очистить, если уже есть
         while layout.count():
             item = layout.takeAt(0)
             w = item.widget()
@@ -628,10 +542,10 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         dlg.exec_()
 
-# ========== ТОЧКА ВХОДА ==========
+# ===== Точка входа =====
 
 def main():
-    # Атрибуты HiDPI до создания приложения
+    # Атрибуты HiDPI — обязательно до создания QApplication
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
