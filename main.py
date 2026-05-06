@@ -266,26 +266,26 @@ TABS = {
              {"key": "N", "label": "N — число испытаний", "type": "int"},
          ],
          "calc": lambda m, N: calc_statistical_prob(m, N)},
-        {"title": "Сложение (несовместимые)", "expression": "P(A∪B) = P(A) + P(B)",
+        {"title": "Теорема сложения \n для несовместных событий", "expression": "P(A∪B) = P(A) + P(B)",
          "params": [
              {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
              {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
          ],
          "calc": lambda pA, pB: calc_addition_disjoint(pA, pB)},
-        {"title": "Сложение (общий случай)", "expression": "P(A∪B) = P(A)+P(B)-P(A∩B)",
+        {"title": "Теорема сложения \n для совместных событий", "expression": "P(A∪B) = P(A)+P(B)-P(A∩B)",
          "params": [
              {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
              {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
              {"key": "P(A∩B)", "label": "P(A∩B) в [0,1]", "type": "float"},
          ],
          "calc": lambda pA, pB, pAB: calc_addition_general(pA, pB, pAB)},
-        {"title": "Умножение (независимые)", "expression": "P(A∩B) = P(A)·P(B)",
+        {"title": "Теорема умножения \n для независимых событий", "expression": "P(A∩B) = P(A)·P(B)",
          "params": [
              {"key": "P(A)", "label": "P(A) в [0,1]", "type": "float"},
              {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
          ],
          "calc": lambda pA, pB: calc_mult_independent(pA, pB)},
-        {"title": "Умножение (общий случай)", "expression": "P(A∩B) = P(A|B)·P(B)",
+        {"title": "Теорема умножения \n для зависимых событий", "expression": "P(A∩B) = P(A|B)·P(B)",
          "params": [
              {"key": "P(A|B)", "label": "P(A|B) в [0,1]", "type": "float"},
              {"key": "P(B)", "label": "P(B) в [0,1]", "type": "float"},
@@ -328,14 +328,14 @@ TABS = {
              {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
          ],
          "calc": lambda n, k, p: calc_bernoulli(n, k, p)},
-        {"title": "Лаплас (локальная)", "expression": "≈ φ(z)/√(npq), z=(k-np)/√(npq)",
+        {"title": "Локальная формула Лапсала", "expression": "≈ φ(z)/√(npq), z=(k-np)/√(npq)",
          "params": [
              {"key": "n", "label": "n — число испытаний", "type": "int"},
              {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
              {"key": "k", "label": "k — число успехов", "type": "int"},
          ],
          "calc": lambda n, p, k: calc_laplace_local(n, p, k)},
-        {"title": "Лаплас (интегральная)", "expression": "≈ Φ(z2)-Φ(z1) с непрерывн. поправкой",
+        {"title": "Интегральная формула Лапласа", "expression": "≈ Φ(z2)-Φ(z1) с непрерывн. поправкой",
          "params": [
              {"key": "n", "label": "n — число испытаний", "type": "int"},
              {"key": "p", "label": "p — вероятность успеха (0..1)", "type": "float"},
@@ -343,7 +343,7 @@ TABS = {
              {"key": "k2", "label": "k2 — верхняя граница", "type": "int"},
          ],
          "calc": lambda n, p, k1, k2: calc_laplace_integral(n, p, k1, k2)},
-        {"title": "Пуассон", "expression": "P(X=k)=e^{-λ}·λ^k/k!",
+        {"title": "Формула Пуассона", "expression": "P(X=k)=e^{-λ}·λ^k/k!",
          "params": [
              {"key": "λ", "label": "λ — среднее (≥0)", "type": "float"},
              {"key": "k", "label": "k — целое (≥0)", "type": "int"},
@@ -377,7 +377,7 @@ class FormulaDialog(QtWidgets.QDialog):
             edit.setPlaceholderText(p["key"])
             edit.setClearButtonEnabled(True)
             if p.get("type") == "list_int":
-                edit.setToolTip("Список целых через запятую, например: 2,1,3")
+                edit.setToolTip("Список целых через запятую, например: 1,2,3")
             self.edits.append(edit)
             form.addRow(p["label"] + ":", edit)
 
@@ -470,8 +470,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Контейнеры плиток на вкладках
         self.tiles_combinatorics = self.ui.tilesCombinatorics
-        self.tiles_probability   = self.ui.tilesProbability
-        self.tiles_repeated      = self.ui.tilesRepeated
+        self.tiles_probability = self.ui.tilesProbability
+        self.tiles_repeated = self.ui.tilesRepeated
 
         self._setup_style()
         self._populate_tiles(self.tiles_combinatorics, TABS["tilesCombinatorics"])

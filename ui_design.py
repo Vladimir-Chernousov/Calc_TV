@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(980, 640)
+        MainWindow.resize(1280, 640)
         MainWindow.setWindowTitle("Калькулятор теории вероятностей")
 
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -56,7 +56,7 @@ class Ui_MainWindow(object):
         # ---------- Вкладка 2: Теория Вероятности ----------
         self.tabProbability = QtWidgets.QWidget()
         self.tabProbability.setObjectName("tabProbability")
-        self.tabWidget.addTab(self.tabProbability, "Теория Вероятности")
+        self.tabWidget.addTab(self.tabProbability, "Теория Вероятностей")
 
         vboxProb = QtWidgets.QVBoxLayout(self.tabProbability)
         vboxProb.setContentsMargins(0, 0, 0, 0)
