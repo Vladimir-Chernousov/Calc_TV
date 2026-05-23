@@ -375,6 +375,7 @@ class JournalDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.journal = journal
 
+        self.setWindowIcon(QtGui.QIcon('logo.ico'))
         self.setWindowTitle("Журнал вычислений")
         self.resize(1100, 600)
         self.setModal(True)
@@ -704,6 +705,7 @@ TABS = {
 class FormulaDialog(QtWidgets.QDialog):
     def __init__(self, parent, section_name, title, expression, params, calc_fn, journal=None):
         super().__init__(parent)
+        self.setWindowIcon(QtGui.QIcon('logo.ico'))
         self.setWindowTitle(title)
 
         self.section_name = section_name
@@ -849,6 +851,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.setWindowIcon(QtGui.QIcon('logo.ico'))
 
         self.journal = ComputationJournal()
 
