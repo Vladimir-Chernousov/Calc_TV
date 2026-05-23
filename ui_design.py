@@ -6,6 +6,7 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1280, 640)
         MainWindow.setWindowTitle("Калькулятор теории вероятностей")
+        MainWindow.setWindowIcon(QtGui.QIcon('src/logo.ico'))
 
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         MainWindow.setCentralWidget(self.centralwidget)

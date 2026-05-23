@@ -852,8 +852,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.setWindowIcon(QtGui.QIcon('srs/logo.ico'))
-
         self.journal = ComputationJournal()
 
         self.tiles_combinatorics = self.ui.tilesCombinatorics
